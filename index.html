@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+
+<html lang="en-US">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chart of Random Numbers</title>
+  <script src="https://www.gstatic.com/charts/loader.js"></script>
+  <script>
+google.charts.load('current', {packages: ['corechart', 'table']});
+google.charts.setOnLoadCallback(fetchData);
+
+function fetchData() {
+  if (typeof google === "undefined") {
+    return;
+  }
+  fetch('https://thisarray.github.io/random_number_generator/business.json')
+    .then(response => response.json())
+    .then(data => drawChart(data));
+}
+
+/*
+ * Return an array of Date objects starting from a month ago to today, inclusive.
+ */
+function getLastMonth(today) {
+  let dates = [],
+      year = today.getFullYear(),
+      month = today.getMonth() - 1,
+      date = today.getDate();
+  if (month < 0) {
+    year--;
+    month = 11;
+  }
+
+  // Add the dates from the previous month
+  for (let i = date; i < 32; i++) {
+    let d = new Date(year, month, i);
+    if ((d.getFullYear() === year) &&
+        (d.getMonth() === month) &&
+        (d.getDate() === i)) {
+      dates.push(d);
+    }
+  }
+
+  // Add the dates from the current month including today
+  month++;
+  if (month > 11) {
+    month = 0;
+    year++;
+  }
+  for (let i = 1; i <= date; i++) {
+    let d = new Date(year, month, i);
+    if ((d.getFullYear() === year) &&
+        (d.getMonth() === month) &&
+        (d.getDate() === i)) {
+      dates.push(d);
+    }
+  }
+
+  return dates;
+}
+
+/*
+ * Populate the chart with data from jsonData.
+ */
+function drawChart(jsonData) {
+  const element = document.querySelector('#chart');
+
+  let today = new Date(),
+      dates = getLastMonth(today),
+      data = new google.visualization.DataTable(),
+      chart = new google.visualization.LineChart(element),
+      options = {
+        legend: { position: 'bottom' }
+      },
+      isoDate, row;
+
+  data.addColumn('date', 'Date');
+  data.addColumn('number', 'Dow Jones Industrial Average');
+  data.addColumn('number', 'NASDAQ Composite');
+  data.addColumn('number', 'S&P 500');
+  for (let date of dates) {
+    isoDate = `${ date.getFullYear() }-${ (date.getMonth() + 1).toFixed().padStart(2, '0') }-${ date.getDate().toFixed().padStart(2, '0') }`;
+    if (isoDate in jsonData) {
+      row = [date];
+      for (let [key, scale] of [['^DJI', 8], ['^IXIC', 3], ['^GSPC', 1]]) {
+        row.push({v: parseFloat(jsonData[isoDate][key].replaceAll(',', '')) / scale, f: jsonData[isoDate][key]});
+      }
+      data.addRow(row);
+    }
+  }
+
+  chart.draw(data, options);
+}
+  </script>
+  <style type="text/css" media="screen">
+body {
+  background-color: white;
+  color: black;
+}
+output {
+  display: block;
+  height: 600px;
+  width: 800px;
+}
+  </style>
+</head>
+
+<body>
+
+<main>
+<h1>Chart of Random Numbers</h1>
+
+<output id="chart"></output>
+
+<p>Over the past month.</p>
+
+</main>
+
+</body>
+
+</html>
