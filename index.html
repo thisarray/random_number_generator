@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chart of Random Numbers</title>
+  <title>Charts of Random Numbers Over the Past Month</title>
   <script src="https://www.gstatic.com/charts/loader.js"></script>
   <script>
 google.charts.load('current', {packages: ['corechart', 'table']});
@@ -16,7 +16,14 @@ function fetchData() {
   }
   fetch('https://thisarray.github.io/random_number_generator/business.json')
     .then(response => response.json())
-    .then(data => drawChart(data));
+    .then(data => drawCharts(data));
+}
+
+/*
+ * Return an ISO date string (YYYY-MM-DD) from date containing only the year, month, and date.
+ */
+function date_to_iso(date) {
+ return `${ date.getFullYear() }-${ (date.getMonth() + 1).toFixed().padStart(2, '0') }-${ date.getDate().toFixed().padStart(2, '0') }`;
 }
 
 /*
@@ -61,14 +68,12 @@ function getLastMonth(today) {
 }
 
 /*
- * Populate the chart with data from jsonData.
+ * Draw the chart for the dates in dates.
  */
-function drawChart(jsonData) {
-  const element = document.querySelector('#chart');
+function drawLastMonth(elementID, jsonData, dates) {
+  const element = document.querySelector(elementID);
 
-  let today = new Date(),
-      dates = getLastMonth(today),
-      data = new google.visualization.DataTable(),
+  let data = new google.visualization.DataTable(),
       chart = new google.visualization.LineChart(element),
       options = {
         legend: { position: 'bottom' }
@@ -80,17 +85,80 @@ function drawChart(jsonData) {
   data.addColumn('number', 'NASDAQ Composite');
   data.addColumn('number', 'S&P 500');
   for (let date of dates) {
-    isoDate = `${ date.getFullYear() }-${ (date.getMonth() + 1).toFixed().padStart(2, '0') }-${ date.getDate().toFixed().padStart(2, '0') }`;
+    isoDate = date_to_iso(date);
     if (isoDate in jsonData) {
       row = [date];
-      for (let [key, scale] of [['^DJI', 8], ['^IXIC', 3], ['^GSPC', 1]]) {
-        row.push({v: parseFloat(jsonData[isoDate][key].replaceAll(',', '')) / scale, f: jsonData[isoDate][key]});
+      for (let [i, scale] of [['^DJI', 8], ['^IXIC', 3], ['^GSPC', 1]]) {
+        row.push({v: parseFloat(jsonData[isoDate][i].replaceAll(',', '')) / scale, f: jsonData[isoDate][i]});
       }
       data.addRow(row);
     }
   }
 
   chart.draw(data, options);
+}
+
+/*
+ * Draw a histogram of the counts in dataArray.
+ */
+function drawHistogram(elementID, dataArray) {
+  const element = document.querySelector(elementID);
+
+  let length = dataArray.length,
+      data = new google.visualization.DataTable(),
+      chart = new google.visualization.ColumnChart(element),
+      options = {
+        bar: {groupWidth: '96%'},
+        colors: ['green'],
+        hAxis: {title: 'Value'},
+        legend: {position: 'none'},
+        vAxis: {title: 'Count'}
+      };
+
+  data.addColumn('number', 'Value');
+  data.addColumn('number', 'Count');
+  for (let i = 0; i < length; i++) {
+    data.addRow([i, dataArray[i]]);
+  }
+  chart.draw(data, options);
+}
+
+/*
+ * Populate the charts with data from jsonData.
+ */
+function drawCharts(jsonData) {
+  let today = new Date(),
+      dates = getLastMonth(today),
+      tens = (new Array(10)).fill(0),
+      ones = (new Array(10)).fill(0),
+      tenths = (new Array(10)).fill(0),
+      hundredths = (new Array(10)).fill(0),
+      index;
+
+  drawLastMonth('#chart', jsonData, dates);
+
+  for (let date of dates) {
+    isoDate = date_to_iso(date);
+    if (isoDate in jsonData) {
+      for (let i of ['^DJI', '^IXIC', '^GSPC']) {
+        index = jsonData[isoDate][i].indexOf('.');
+        if (index < 2) {
+          continue;
+        }
+        if (jsonData[isoDate][i].length <= (index + 2)) {
+          continue;
+        }
+        tens[parseInt(jsonData[isoDate][i].charAt(index - 2), 10)] += 1;
+        ones[parseInt(jsonData[isoDate][i].charAt(index - 1), 10)] += 1;
+        tenths[parseInt(jsonData[isoDate][i].charAt(index + 1), 10)] += 1;
+        hundredths[parseInt(jsonData[isoDate][i].charAt(index + 2), 10)] += 1;
+      }
+    }
+  }
+  drawHistogram('#tensDigit', tens);
+  drawHistogram('#onesDigit', ones);
+  drawHistogram('#tenthsDigit', tenths);
+  drawHistogram('#hundredthsDigit', hundredths);
 }
   </script>
   <style type="text/css" media="screen">
@@ -109,12 +177,27 @@ output {
 <body>
 
 <main>
-<h1>Chart of Random Numbers</h1>
+<h1>Charts of Random Numbers Over the Past Month</h1>
 
 <output id="chart"></output>
 
-<p>Over the past month.</p>
+<h2>By position</h2>
 
+<h3>Tens digit</h3>
+
+<output id="tensDigit"></output>
+
+<h3>Ones digit</h3>
+
+<output id="onesDigit"></output>
+
+<h3>Tenths digit</h3>
+
+<output id="tenthsDigit"></output>
+
+<h3>Hundredths digit</h3>
+
+<output id="hundredthsDigit"></output>
 </main>
 
 </body>
