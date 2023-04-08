@@ -20,13 +20,6 @@ function fetchData() {
 }
 
 /*
- * Return an ISO date string (YYYY-MM-DD) from date containing only the year, month, and date.
- */
-function date_to_iso(date) {
- return `${ date.getFullYear() }-${ (date.getMonth() + 1).toFixed().padStart(2, '0') }-${ date.getDate().toFixed().padStart(2, '0') }`;
-}
-
-/*
  * Return an array of Date objects starting from a month ago to today, inclusive.
  */
 function getLastMonth(today) {
@@ -76,7 +69,7 @@ function drawLastMonth(elementID, jsonData, dates) {
   let data = new google.visualization.DataTable(),
       chart = new google.visualization.LineChart(element),
       options = {
-        legend: { position: 'bottom' }
+        legend: {position: 'bottom'}
       },
       isoDate, row;
 
@@ -85,7 +78,7 @@ function drawLastMonth(elementID, jsonData, dates) {
   data.addColumn('number', 'NASDAQ Composite');
   data.addColumn('number', 'S&P 500');
   for (let date of dates) {
-    isoDate = date_to_iso(date);
+    isoDate = date.toISOString().substring(0, 10);
     if (isoDate in jsonData) {
       row = [date];
       for (let [i, scale] of [['^DJI', 8], ['^IXIC', 3], ['^GSPC', 1]]) {
@@ -138,7 +131,7 @@ function drawCharts(jsonData) {
   drawLastMonth('#chart', jsonData, dates);
 
   for (let date of dates) {
-    isoDate = date_to_iso(date);
+    isoDate = date.toISOString().substring(0, 10);
     if (isoDate in jsonData) {
       for (let i of ['^DJI', '^IXIC', '^GSPC']) {
         index = jsonData[isoDate][i].indexOf('.');
@@ -198,6 +191,7 @@ output {
 <h3>Hundredths digit</h3>
 
 <output id="hundredthsDigit"></output>
+
 </main>
 
 </body>
