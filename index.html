@@ -4,9 +4,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Charts of Random Numbers Over the Past Month</title>
+  <title>Charts of Random Numbers Over the Past 60 Days</title>
   <script src="https://www.gstatic.com/charts/loader.js"></script>
   <script>
+/*
+ * Integer number of dates to include.
+ */
+const DATE_COUNT = 60;
+
 google.charts.load('current', {packages: ['corechart', 'table']});
 google.charts.setOnLoadCallback(fetchData);
 
@@ -20,50 +25,9 @@ function fetchData() {
 }
 
 /*
- * Return an array of Date objects starting from a month ago to today, inclusive.
+ * Draw the line chart for the dates in dates.
  */
-function getLastMonth(today) {
-  let dates = [],
-      year = today.getFullYear(),
-      month = today.getMonth() - 1,
-      date = today.getDate();
-  if (month < 0) {
-    year--;
-    month = 11;
-  }
-
-  // Add the dates from the previous month
-  for (let i = date; i < 32; i++) {
-    let d = new Date(year, month, i);
-    if ((d.getFullYear() === year) &&
-        (d.getMonth() === month) &&
-        (d.getDate() === i)) {
-      dates.push(d);
-    }
-  }
-
-  // Add the dates from the current month including today
-  month++;
-  if (month > 11) {
-    month = 0;
-    year++;
-  }
-  for (let i = 1; i <= date; i++) {
-    let d = new Date(year, month, i);
-    if ((d.getFullYear() === year) &&
-        (d.getMonth() === month) &&
-        (d.getDate() === i)) {
-      dates.push(d);
-    }
-  }
-
-  return dates;
-}
-
-/*
- * Draw the chart for the dates in dates.
- */
-function drawLastMonth(elementID, jsonData, dates) {
+function drawLineChart(elementID, jsonData, dates) {
   const element = document.querySelector(elementID);
 
   let data = new google.visualization.DataTable(),
@@ -71,21 +35,18 @@ function drawLastMonth(elementID, jsonData, dates) {
       options = {
         legend: {position: 'bottom'}
       },
-      isoDate, row;
+      row;
 
   data.addColumn('date', 'Date');
   data.addColumn('number', 'Dow Jones Industrial Average');
   data.addColumn('number', 'NASDAQ Composite');
   data.addColumn('number', 'S&P 500');
-  for (let date of dates) {
-    isoDate = date.toISOString().substring(0, 10);
-    if (isoDate in jsonData) {
-      row = [date];
-      for (let [i, scale] of [['^DJI', 8], ['^IXIC', 3], ['^GSPC', 1]]) {
-        row.push({v: parseFloat(jsonData[isoDate][i].replaceAll(',', '')) / scale, f: jsonData[isoDate][i]});
-      }
-      data.addRow(row);
+  for (let isoDate of dates) {
+    row = [new Date(isoDate)];
+    for (let [i, scale] of [['^DJI', 8], ['^IXIC', 3], ['^GSPC', 1]]) {
+      row.push({v: parseFloat(jsonData[isoDate][i].replaceAll(',', '')) / scale, f: jsonData[isoDate][i]});
     }
+    data.addRow(row);
   }
 
   chart.draw(data, options);
@@ -113,6 +74,7 @@ function drawHistogram(elementID, dataArray) {
   for (let i = 0; i < length; i++) {
     data.addRow([i, dataArray[i]]);
   }
+
   chart.draw(data, options);
 }
 
@@ -120,32 +82,37 @@ function drawHistogram(elementID, dataArray) {
  * Populate the charts with data from jsonData.
  */
 function drawCharts(jsonData) {
-  let today = new Date(),
-      dates = getLastMonth(today),
+  let dates = [],
       tens = (new Array(10)).fill(0),
       ones = (new Array(10)).fill(0),
       tenths = (new Array(10)).fill(0),
       hundredths = (new Array(10)).fill(0),
       index;
 
-  drawLastMonth('#chart', jsonData, dates);
+  // Loop through all the dates for which we have data
+  for (const k of Object.getOwnPropertyNames(jsonData)) {
+    if ((k.length === 10) && k.startsWith('20')) {
+      dates.push(k);
+    }
+  }
+  dates.sort();
+  dates = dates.slice(-DATE_COUNT);
 
-  for (let date of dates) {
-    isoDate = date.toISOString().substring(0, 10);
-    if (isoDate in jsonData) {
-      for (let i of ['^DJI', '^IXIC', '^GSPC']) {
-        index = jsonData[isoDate][i].indexOf('.');
-        if (index < 2) {
-          continue;
-        }
-        if (jsonData[isoDate][i].length <= (index + 2)) {
-          continue;
-        }
-        tens[parseInt(jsonData[isoDate][i].charAt(index - 2), 10)] += 1;
-        ones[parseInt(jsonData[isoDate][i].charAt(index - 1), 10)] += 1;
-        tenths[parseInt(jsonData[isoDate][i].charAt(index + 1), 10)] += 1;
-        hundredths[parseInt(jsonData[isoDate][i].charAt(index + 2), 10)] += 1;
+  drawLineChart('#chart', jsonData, dates);
+
+  for (let isoDate of dates) {
+    for (let i of ['^DJI', '^IXIC', '^GSPC']) {
+      index = jsonData[isoDate][i].indexOf('.');
+      if (index < 2) {
+        continue;
       }
+      if (jsonData[isoDate][i].length <= (index + 2)) {
+        continue;
+      }
+      tens[parseInt(jsonData[isoDate][i].charAt(index - 2), 10)] += 1;
+      ones[parseInt(jsonData[isoDate][i].charAt(index - 1), 10)] += 1;
+      tenths[parseInt(jsonData[isoDate][i].charAt(index + 1), 10)] += 1;
+      hundredths[parseInt(jsonData[isoDate][i].charAt(index + 2), 10)] += 1;
     }
   }
   drawHistogram('#tensDigit', tens);
@@ -170,7 +137,7 @@ output {
 <body>
 
 <main>
-<h1>Charts of Random Numbers Over the Past Month</h1>
+<h1>Charts of Random Numbers Over the Past 60 Days</h1>
 
 <output id="chart"></output>
 
