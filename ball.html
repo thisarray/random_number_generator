@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+
+<html lang="en-US">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Charts of Winning Numbers</title>
+  <script src="https://www.gstatic.com/charts/loader.js"></script>
+  <script>
+/*
+ * Integer limit on the numbers.
+ */
+const LIMIT = 80;
+
+google.charts.load('current', {packages: ['corechart', 'table']});
+google.charts.setOnLoadCallback(fetchData);
+
+function fetchData() {
+  if (typeof google === "undefined") {
+    return;
+  }
+  fetch('https://thisarray.github.io/random_number_generator/mega_millions.json')
+    .then(response => response.json())
+    .then(data => drawCharts(data, '#megaRegular', '#megaSpecial'));
+  fetch('https://thisarray.github.io/random_number_generator/powerball.json')
+    .then(response => response.json())
+    .then(data => drawCharts(data, '#powerRegular', '#powerSpecial'));
+}
+
+/*
+ * Draw a histogram in elementID of the counts.
+ */
+function drawHistogram(elementID, counts) {
+  const element = document.querySelector(elementID);
+
+  let length = counts.length,
+      data = new google.visualization.DataTable(),
+      chart = new google.visualization.ColumnChart(element),
+      options = {
+        bar: {groupWidth: '96%'},
+        colors: ['green'],
+        hAxis: {title: 'Value'},
+        legend: {position: 'none'},
+        vAxis: {title: 'Count'}
+      };
+
+  data.addColumn('number', 'Value');
+  data.addColumn('number', 'Count');
+  for (let i = 0; i < length; i++) {
+    data.addRow([i, counts[i]]);
+  }
+
+  chart.draw(data, options);
+}
+
+/*
+ * Populate the charts in regularID and specialID with data from jsonData.
+ */
+function drawCharts(jsonData, regularID, specialID) {
+  let dates = [],
+      regular = (new Array(LIMIT)).fill(0),
+      special = (new Array(LIMIT)).fill(0);
+
+  // Loop through all the dates for which we have data
+  for (const k of Object.getOwnPropertyNames(jsonData)) {
+    if ((k.length === 10) && (k.startsWith('19') || k.startsWith('20'))) {
+      for (let n of jsonData[k]['numbers']) {
+        regular[n] += 1;
+      }
+      special[jsonData[k]['special']] += 1;
+    }
+  }
+
+  drawHistogram(regularID, regular);
+  drawHistogram(specialID, special);
+}
+  </script>
+  <style type="text/css" media="screen">
+body {
+  background-color: white;
+  color: black;
+}
+.mega {
+  background-color: yellow;
+  color: black;
+}
+.power {
+  background-color: red;
+  color: white;
+}
+h3 {
+  margin-left: 1em;
+}
+output {
+  display: block;
+  height: 600px;
+  width: 800px;
+}
+  </style>
+</head>
+
+<body>
+
+<main>
+
+<h1>Charts of Winning Numbers</h1>
+
+<h2 class="mega">Mega Millions</h2>
+
+<h3>Regular</h3>
+
+<output id="megaRegular"></output>
+
+<h3 class="mega">Mega</h3>
+
+<output id="megaSpecial"></output>
+
+<h2 class="power">Powerball</h2>
+
+<h3>Regular</h3>
+
+<output id="powerRegular"></output>
+
+<h3 class="power">Power</h3>
+
+<output id="powerSpecial"></output>
+
+</main>
+
+</body>
+
+</html>
