@@ -53,12 +53,12 @@ function drawLineChart(elementID, jsonData, dates) {
 }
 
 /*
- * Draw a histogram of the counts in dataArray.
+ * Draw a histogram in elementID of the counts.
  */
-function drawHistogram(elementID, dataArray) {
+function drawHistogram(elementID, counts) {
   const element = document.querySelector(elementID);
 
-  let length = dataArray.length,
+  let length = counts.length,
       data = new google.visualization.DataTable(),
       chart = new google.visualization.ColumnChart(element),
       options = {
@@ -72,7 +72,7 @@ function drawHistogram(elementID, dataArray) {
   data.addColumn('number', 'Value');
   data.addColumn('number', 'Count');
   for (let i = 0; i < length; i++) {
-    data.addRow([i, dataArray[i]]);
+    data.addRow([i, counts[i]]);
   }
 
   chart.draw(data, options);
@@ -137,6 +137,7 @@ output {
 <body>
 
 <main>
+
 <h1>Charts of Random Numbers Over the Past 60 Days</h1>
 
 <output id="chart"></output>
